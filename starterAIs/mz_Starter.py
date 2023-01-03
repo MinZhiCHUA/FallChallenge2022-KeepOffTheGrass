@@ -20,6 +20,23 @@ class Tile:
 
 width, height = [int(i) for i in input().split()]
 
+# Functions
+def optimize_recycler():
+    return True
+
+def optimize_spawn():
+    return 2
+
+def find_path():
+    #find among a neutral_tiles that has the highest scrap amount
+    for neutral_tile in neutral_tiles:
+        highest_scrap_amount = 1
+        if neutral_tile.scrap_amount > highest_scrap_amount & neutral_tile.in_range_of_recycler!=1:
+            path_x = neutral_tile.x
+            path_y = neutral_tile.y
+    
+    return path_x, path_y
+
 # game loop
 while True:
     tiles = []
@@ -57,14 +74,20 @@ while True:
                 neutral_tiles.append(tile)
 
     actions = []
+    print("Opp_tile: ", opp_tiles,file=sys.stderr, flush=True)
+    
+
 
     for tile in my_tiles:
         if tile.can_spawn:
-            amount = 0 # TODO: pick amount of robots to spawn here
+            # Check of we should spawn here
+            
+            amount = optimize_spawn() # TODO: pick amount of robots to spawn here
             if amount > 0:
                 actions.append('SPAWN {} {} {}'.format(amount, tile.x, tile.y))
         if tile.can_build:
-            should_build = False # TODO: pick whether to build recycler here
+            
+            should_build = optimize_recycler() # TODO: pick whether to build recycler here
             if should_build:
                 actions.append('BUILD {} {}'.format(tile.x, tile.y))
 
@@ -75,7 +98,7 @@ while True:
         
         if target:
             amount = 3 # TODO: pick amount of units to move
-            actions.append('MOVE {} {} {} {} {}'.format(amount, tile.x, tile.y, target_x, target_y))
+            actions.append('MOVE {} {} {} {} {}'.format(amount, target_x, target_y, target.x, target.y))
 
     # To debug: print("Debug messages...", file=sys.stderr, flush=True)
     print(';'.join(actions) if len(actions) > 0 else 'WAIT')
