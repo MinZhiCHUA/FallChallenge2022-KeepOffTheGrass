@@ -21,21 +21,75 @@ class Tile:
 width, height = [int(i) for i in input().split()]
 
 # Functions
-def optimize_recycler():
-    return True
+def optimize_recycler(my_tiles):
+    max_scrap_amount = 0
+    location_tile = Tile(-1,-1,-1,-1,-1,False,False,False,False)
+    for my_tile in my_tiles:
+        #check for nearby tiles:
+        if (my_tile.scrap_amount >= max_scrap_amount) & (my_tile.units == 0):
+            max_scrap_amount = my_tile.scrap_amount
+            location_tile = my_tile
+    
+    return location_tile
 
 def optimize_spawn():
-    return 2
+    return 1
 
 def find_path():
     #find among a neutral_tiles that has the highest scrap amount
+    highest_scrap_amount = 1
     for neutral_tile in neutral_tiles:
-        highest_scrap_amount = 1
+        
         if neutral_tile.scrap_amount > highest_scrap_amount & neutral_tile.in_range_of_recycler!=1:
             path_x = neutral_tile.x
             path_y = neutral_tile.y
+            highest_scrap_amount = neutral_tile.scrap_amount
     
     return path_x, path_y
+
+def find_path_1step(current_tile):
+    path_options = []
+    decision_path = current_tile
+    # priority 1:  step on enemy path
+    for opp_tile in opp_tiles:
+        if opp_tile.x == current_tile.x or opp_tile.y == current_tile.y:
+            path_options.append(opp_tile)
+
+    # priority 2: natural tiles that has higher
+    if len(path_options) == 0:
+        for neutral_tile in neutral_tiles:
+            if neutral_tile.x == current_tile.x or neutral_tile.y == current_tile.y:
+                path_options.append(neutral_tile)
+
+    # priorty 3:
+    # if len(path_options) == 0:
+    # Choose the best based on the highest scrap_amount
+
+
+    highest_scrap_amount = 0
+    for path in path_options:
+        if path.scrap_amount >= highest_scrap_amount:
+            print("Higher scrap amount!: ", path ,file=sys.stderr, flush=True)
+            highest_scrap_amount = path.scrap_amount
+            decision_path = path
+
+    # print("current_tile: ", current_tile ,file=sys.stderr, flush=True)
+    # print("Decision_path: ", decision_path ,file=sys.stderr, flush=True)
+
+    return decision_path.x, decision_path.y
+
+
+def find_path_recycler(opp_recyclers):
+    for opp_recycler in opp_recyclers:
+        highest_scrap_amount = 1
+        if opp_recycler.scrap_amount > highest_scrap_amount & opp_recycler.in_range_of_recycler!=1:
+            path_x = opp_recycler.x
+            path_y = opp_recycler.y
+            highest_scrap_amount = opp_recycler.scrap_amount
+    
+    return opp_recycler.x, opp_recycler.y
+
+
 
 # game loop
 while True:
@@ -74,9 +128,11 @@ while True:
                 neutral_tiles.append(tile)
 
     actions = []
-    print("Opp_tile: ", opp_tiles,file=sys.stderr, flush=True)
     
-
+    # Should I build the recycler and where
+    if len(my_recyclers) == 0:
+        recycler_loc = optimize_recycler(my_tiles)
+        actions.append('BUILD {} {}'.format(recycler_loc.x, recycler_loc.y))
 
     for tile in my_tiles:
         if tile.can_spawn:
@@ -85,20 +141,22 @@ while True:
             amount = optimize_spawn() # TODO: pick amount of robots to spawn here
             if amount > 0:
                 actions.append('SPAWN {} {} {}'.format(amount, tile.x, tile.y))
-        if tile.can_build:
+        # if tile.can_build:
             
-            should_build = optimize_recycler() # TODO: pick whether to build recycler here
-            if should_build:
-                actions.append('BUILD {} {}'.format(tile.x, tile.y))
+        #     should_build = optimize_recycler(len(my_recyclers), tile) # TODO: pick whether to build recycler here
+        #     if should_build:
+        #         actions.append('BUILD {} {}'.format(tile.x, tile.y))
 
     for tile in my_units:
         # Find the path that has the highest scrap_amount
         target = True
-        target_x, target_y = find_path() # TODO: pick a destination tile
+        # target_x, target_y = find_path_recycler(opp_recyclers) # TODO: pick a destination tile
+        # target_x, target_y = find_path() # TODO: pick a destination tile
+        target_x, target_y = find_path_1step(tile) # TODO: pick a destination tile
         
         if target:
-            amount = 3 # TODO: pick amount of units to move
-            actions.append('MOVE {} {} {} {} {}'.format(amount, target_x, target_y, target.x, target.y))
+            amount = tile.units # TODO: pick amount of units to move
+            actions.append('MOVE {} {} {} {} {}'.format(amount, tile.x, tile.y, target_x, target_y))
 
     # To debug: print("Debug messages...", file=sys.stderr, flush=True)
     print(';'.join(actions) if len(actions) > 0 else 'WAIT')
